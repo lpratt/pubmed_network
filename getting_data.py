@@ -17,20 +17,10 @@ handle_medline = Entrez.efetch(db="pubmed", id=idlist, rettype="medline", retmod
 records = Medline.parse(handle_medline)
 records = list(records)
 
-# Creating output JSON file, except I'm not exactly sure how to do it...
+# Creating output JSON file, currently overwrites file, need to append to file
 data = {}
-with open("data.json", "w") as f:
+with open("{}.json".format(searchterm), "w") as f:
     for record in records:
-        data[record.get("PMID", "?")] = record.get("TI", "?"), record.get("FAU", "?"), record.get("MH", "?")
-    json.dump(data, f)  
+        data[record.get("PMID", "?")] = {"title": record.get("TI", "?"), "author(s)": record.get("FAU", "?"), "keywords": record.get("MH", "?")}
+    json.dump(data, f, sort_keys=True, indent=4, separators=(',', ': '))
 f.closed
-print data
-
-# Just as a check
-#for record in records:
-#    print "id:", record.get("PMID", "?")
-#    print "title:", record.get("TI", "?")
-#    print "authors:", record.get("FAU", "?")
-#    print "keywords:", record.get("MH", "?")
-#    print
-    
