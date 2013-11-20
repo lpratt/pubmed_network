@@ -1,3 +1,5 @@
+# Reads data.json into a python dictionary
+
 import json
 
 # Reads in json file

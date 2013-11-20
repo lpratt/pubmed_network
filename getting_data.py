@@ -1,3 +1,5 @@
+# Queries the Entrez/Medline databases and creates a JSON file with the results
+
 import sys
 import json
 from Bio import Entrez
@@ -19,7 +21,7 @@ records = list(records)
 
 # Creating output JSON file, currently overwrites file, need to append to file
 data = {}
-with open("{}.json".format(searchterm), "w") as f:
+with open("{}.json".format(searchterm.replace(' ','_')), "w") as f:
     for record in records:
         data[record.get("PMID", "?")] = {"title": record.get("TI", "?"), "author(s)": record.get("FAU", "?"), "keywords": record.get("MH", "?")}
     json.dump(data, f, sort_keys=True, indent=4, separators=(',', ': '))
