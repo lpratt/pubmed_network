@@ -9,64 +9,85 @@ Lily Pratt & Erik Islo
 Begins by querying Entrez/Medline databases through the Bio python module.
 From this data, a JSON file is created. Subsequent runs of the program
 append to the existing JSON file, excluding duplicates.
+
+Authors are stored as a dictionary with keys as Author names and values
+as a Counter object with all linked authors and their respective connection
+weights.
 """
 
 import sys, json
+from collections import Counter
 from Bio import Entrez, Medline
 
+authors = {}
+
+def authorWeight(authors)
+  """
+  Defines an edge weight for coauthors of a given paper.
+  Determined so that the more authors on a paper the weaker their weight.
+  """
+
+  # returns a dictionary of linked authors and respective edge weights
+  return 
+
+
+def addAuthor(author, coauthors)
+  if author in authors:
+    authors.update({author: authorWeight(coauthors)})
+
+def updateAuthor(author, coauthors)
+
+def writeToJSON()
+
+
 def gatherData(search_term, email="lwrpratt@gmail.com"):
-  # Tell NCBI who we are (they track daily usage)
-  Entrez.email = email
 
-  # What are we looking for? Def'd by terminal argument.
-  search_term = sys.argv[1]
+  Entrez.email = email       # NCBI identification
+  search_term = sys.argv[1]  # what are we looking for?
 
-  # Search for the term, create list of matching paper's ID's
+  # See how many papers match this query
+  handle = Entrez.egquery(term=search_term)
+  record = Entrez.read(handle)
+  for row in record["eGQueryResult"]:
+    if row["DbName"]=="pubmed":
+      num_papers = row["Count"]
+  print num_papers + " papers found with egquery."
+
   handle = Entrez.esearch(db="pubmed", term=search_term)
-  record_for_id = Entrez.read(handle)
-  idlist = record_for_id["IdList"]
-  handle_medline = Entrez.efetch(db="pubmed", id=idlist, rettype="medline", retmode="text")
-  records = Medline.parse(handle_medline)
-  records = list(records)
+  record = Entrez.read(handle)
+  idlist = record["IdList"]
+  print "Search for '%s' resulted in %s results.\n" % (search_term, str(len(idlist)))
 
+  handle = Entrez.efetch(db="pubmed", id=idlist, rettype="medline", retmode ="text")
+  records = Medline.parse(handle)
+  print "efetch complete"
+
+
+  for record in records:
+    au = record.get('AU', '?')
+    for a in au:
+      if au in authors:
+        authors.update{}
+      else:
+
+      
+
+"""
+  # Put Paper Information in a JSON file
   data = {}
-  with open("{}.json".format(search_term.replace(' ', '_')), "w") as f:
+  with open("data.json", "wb") as f:
     for record in records:
       data[record.get("PMID", "?")] = {"title": record.get("TI", "?"), "author(s)": record.get("FAU", "?"), "keywords": record.get("MH", "?")}
       json.dump(data, f, sort_keys=True, indent=4, separators=(',', ': '))
     f.closed
+"""
 
-
-def readData(fname):
-  json_data = open(fname, "r")
-  read_data = json.load(json_data)
-  json_data.close()
-  print "json file read in successfully"
-
-  return read_data
-
-
-def appendToJSON(fname="data.json"):
-  read_data = readData(fname)
-
-  json_termfile = open(searchterm, "r")
-  read_term_data = json.load(json_termfile)
-  json_termfile.close()
-  print "file read in"
-
-  # appends new data together
-  read_data.update(read_term_data)
-
-  with open(fname, "wb") as f:
-    json.dump(read_data, f, sort_keys=True, indent=4, separators=(', ', ': '))
-  f.close
-
-# Script starts here
-print "arguments: 1-search term, 2-filename," # 3-email"
+#-------------------------------------------------------------------------#
+#                          Script starts here                             #
+#-------------------------------------------------------------------------#
+print "ARGUMENTS: 1-search term, 2-filename\n"
 search_term = sys.argv[1]
 # fname = sys.argv[2]
-# email = sys.argv[3] not implemented yet
 
-print "gathering data"
+print "gathering data..."
 gatherData(search_term)
-print "writing to file"
