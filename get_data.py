@@ -53,8 +53,7 @@ def updateAuthor(authors, author, coauthors):
 def writeToJSON(authors, file_name="authors.json"):
   # Put Paper Information in a JSON file
   with open(file_name, "wb") as f:
-    for record in authors:
-      json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
+    json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
     f.closed
 
 
