@@ -60,8 +60,16 @@ def writeToJSON(authors, file_name="authors.json"):
      json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
      f.closed
 
+def makeAdjList(authors, file_name="pubmed_authors.txt"):
+  with open(file_name, 'w') as f:
+    for a in authors:
+      au = a.replace(' ','_')
+      for co in authors[a]:
+        coau = co.replace(' ','_')
+        f.write(au+' '+coau+' '+str(authors[a][co])+'\n')
+  f.close()
 
-
+# TODO check about adding weights for multiple occurence of same paper
 def gatherData(search_term, email="lwrpratt@gmail.com"):
   """
   Queries pubmed for papers with the given search_term using the BioPython
@@ -132,3 +140,6 @@ if __name__ == '__main__':
   authors = gatherData(search_term)
 
   writeToJSON(authors)
+
+
+  makeAdjList(authors)
