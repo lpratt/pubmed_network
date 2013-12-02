@@ -1,5 +1,3 @@
-#!/usr/local/bin/python python
-
 """
 Structure and Dynamics of Complex Networks Final Project
 
@@ -19,75 +17,100 @@ import sys, json
 from collections import Counter
 from Bio import Entrez, Medline
 
-authors = {}
-
-def authorWeight(authors)
+def authorWeight(coauthors):
   """
   Defines an edge weight for coauthors of a given paper.
   Determined so that the more authors on a paper the weaker their weight.
   """
+  coauth = {}
+  num_authors = len(coauthors) + 1        # doesn't include current author being updated
+  weight = 1.0/(float(num_authors) - 1.0) # each author on paper given same link weight
+
+  for a in coauthors:
+    coauth.update({a: weight})
 
   # returns a dictionary of linked authors and respective edge weights
-  return 
+  return coauth
 
 
-def addAuthor(author, coauthors)
-  if author in authors:
-    authors.update({author: authorWeight(coauthors)})
+def addAuthor(authors, author, coauthors):
+  if coauthors == []:
+    authors.update({author : {}})
+  else:
+    authors.update({author : authorWeight(coauthors)})
 
-def updateAuthor(author, coauthors)
+  return authors
 
-def writeToJSON()
+
+def updateAuthor(authors, author, coauthors):
+ return dict(Counter(authors) + Counter(authorWeight(coauthors)))
+ 
+
+#-------------------------------------------------------------------------#
+#                END author network updating functions                    #
+#-------------------------------------------------------------------------#
+
+def writeToJSON(authors, file_name="authors.json"):
+  # Put Paper Information in a JSON file
+  with open(file_name, "wb") as f:
+    for record in authors:
+      json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
+    f.closed
+
 
 
 def gatherData(search_term, email="lwrpratt@gmail.com"):
 
+  authors = {}  # TODO depending on how recursion is implemented, this cannot stay
+
   Entrez.email = email       # NCBI identification
-  search_term = sys.argv[1]  # what are we looking for?
 
   # See how many papers match this query
-  handle = Entrez.egquery(term=search_term)
-  record = Entrez.read(handle)
-  for row in record["eGQueryResult"]:
-    if row["DbName"]=="pubmed":
-      num_papers = row["Count"]
-  print num_papers + " papers found with egquery."
+  handle = Entrez.esearch(db='pubmed', term=search_term)
+  result = Entrez.read(handle)
+  num_papers = result['Count']
+  print num_papers + " papers found with esearch."
 
-  handle = Entrez.esearch(db="pubmed", term=search_term)
-  record = Entrez.read(handle)
-  idlist = record["IdList"]
-  print "Search for '%s' resulted in %s results.\n" % (search_term, str(len(idlist)))
+  #TODO Why does this give a huge number when ids (below) is so short?
 
-  handle = Entrez.efetch(db="pubmed", id=idlist, rettype="medline", retmode ="text")
+  # Get the info on these papers
+  ids = result['IdList']
+  handle = Entrez.efetch(db='pubmed', id=ids, rettype='medline', retmode='text')
   records = Medline.parse(handle)
   print "efetch complete"
 
 
   for record in records:
     au = record.get('AU', '?')
+    au.sort()
     for a in au:
-      if au in authors:
-        authors.update{}
+      #sys.stdout.write("Author: %s, " % str(a)) # debug
+      if a in authors:
+        #print "existing"                        # debug
+        au.remove(a)
+        authors = updateAuthor(authors, a, au)
+        au.append(a) # TODO this is gross and should not stay this way
+        au.sort()
       else:
+        #print "new"                             # debug
+        au.remove(a)
+        authors = addAuthor(authors, a, au)
+        au.append(a)
+        au.sort()
+
+  return authors
 
       
-
-"""
-  # Put Paper Information in a JSON file
-  data = {}
-  with open("data.json", "wb") as f:
-    for record in records:
-      data[record.get("PMID", "?")] = {"title": record.get("TI", "?"), "author(s)": record.get("FAU", "?"), "keywords": record.get("MH", "?")}
-      json.dump(data, f, sort_keys=True, indent=4, separators=(',', ': '))
-    f.closed
-"""
 
 #-------------------------------------------------------------------------#
 #                          Script starts here                             #
 #-------------------------------------------------------------------------#
-print "ARGUMENTS: 1-search term, 2-filename\n"
-search_term = sys.argv[1]
-# fname = sys.argv[2]
+if __name__ == '__main__':
 
-print "gathering data..."
-gatherData(search_term)
+  print "ARGUMENTS: 1-search term, 2-filename\n"
+  search_term = sys.argv[1]
+  # fname = sys.argv[2]
+  print "gathering data..."
+  authors = gatherData(search_term)
+
+  writeToJSON(authors)
