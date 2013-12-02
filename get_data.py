@@ -43,7 +43,11 @@ def addAuthor(authors, author, coauthors):
 
 
 def updateAuthor(authors, author, coauthors):
-  authors[author] = dict(Counter(authors[author]) + Counter(authorWeight(coauthors)))
+  if coauthors == []:
+    pass
+  else:
+    authors[author] = dict(Counter(authors[author]) + Counter(authorWeight(coauthors)))
+
   return authors 
 
 #-------------------------------------------------------------------------#
@@ -52,15 +56,30 @@ def updateAuthor(authors, author, coauthors):
 
 def writeToJSON(authors, file_name="authors.json"):
   # Put Paper Information in a JSON file
-  with open(file_name, "wb") as f:
+  with open(file_name, 'w') as f:
      json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
      f.closed
 
 
 
 def gatherData(search_term, email="lwrpratt@gmail.com"):
+  """
+  Queries pubmed for papers with the given search_term using the BioPython
+  toolkit's Entrez and Medline modules.
 
-  authors = {}  # TODO depending on how recursion is implemented, this cannot stay
+  Saves each paper's authors in a dict with all connected authors and
+  their repsective connection strength
+  """
+
+  try:
+    with open('authors.json', 'r') as auths:
+      authors = json.load(auths)
+      print authors
+      print "successfully imported"
+    auths.closed
+  except IOError:
+    authors = {}
+    print "no old data to import"
 
   Entrez.email = email       # NCBI identification
 
