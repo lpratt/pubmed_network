@@ -43,8 +43,8 @@ def addAuthor(authors, author, coauthors):
 
 
 def updateAuthor(authors, author, coauthors):
- return dict(Counter(authors) + Counter(authorWeight(coauthors)))
- 
+  authors[author] = dict(Counter(authors[author]) + Counter(authorWeight(coauthors)))
+  return authors 
 
 #-------------------------------------------------------------------------#
 #                END author network updating functions                    #
@@ -53,8 +53,8 @@ def updateAuthor(authors, author, coauthors):
 def writeToJSON(authors, file_name="authors.json"):
   # Put Paper Information in a JSON file
   with open(file_name, "wb") as f:
-    json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
-    f.closed
+     json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
+     f.closed
 
 
 
