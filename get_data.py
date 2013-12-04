@@ -54,10 +54,10 @@ def updateAuthor(authors, author, coauthors):
 #                END author network updating functions                    #
 #-------------------------------------------------------------------------#
 
-def writeToJSON(authors, file_name="authors.json"):
+def writeToJSON(obj_to_write, file_name):
   # Put Paper Information in a JSON file
   with open(file_name, 'w') as f:
-     json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
+     json.dump(obj_to_write, f, sort_keys=True, indent=4, separators=(',', ': '))
      f.closed
 
 def makeAdjList(authors, file_name="pubmed_authors.txt"):
@@ -70,8 +70,8 @@ def makeAdjList(authors, file_name="pubmed_authors.txt"):
   f.close()
 
 # TODO check about adding weights for multiple occurence of same paper
-# TODO handle cycles from authors connecting to each other
-  # though perhaps this is handled by cytoscape/networkx
+# TODO handle cycles between authors?  Might be cytoscape/nx parsing
+
 def gatherData(search_term, email="lwrpratt@gmail.com"):
   """
   Queries pubmed for papers with the given search_term using the BioPython
@@ -81,15 +81,19 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
   their repsective connection strength
   """
 
-  try:
+  try:               # import existing author data
     with open('authors.json', 'r') as auths:
       authors = json.load(auths)
-      print authors
-      print "successfully imported"
-    auths.closed
-  except IOError:
+      auths.closed
+  except IOError:    # none to import
     authors = {}
-    print "no old data to import"
+
+  try:               # import existing paper ids
+    with open('papers.json', 'r') as paps:
+      papers = json.load(paps)
+      paps.closed
+  except IOError:    # none to import
+    papers = {}
 
   Entrez.email = email       # NCBI identification
 
@@ -109,24 +113,29 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
 
 
   for record in records:
-    au = record.get('AU', '?')
-    au.sort()
-    for a in au:
-      #sys.stdout.write("Author: %s, " % str(a)) # debug
-      if a in authors:
-        #print "existing"                        # debug
-        au.remove(a)
-        authors = updateAuthor(authors, a, au)
-        au.append(a) # TODO this is gross and should not stay this way
-        au.sort()
-      else:
-        #print "new"                             # debug
-        au.remove(a)
-        authors = addAuthor(authors, a, au)
-        au.append(a)
-        au.sort()
+    idnum = record.get('PMID', '?') 
 
-  return authors
+    if idnum in papers:
+      pass # Already have this paper
+
+    else:
+      papers.update({idnum:{"Title" : record.get('TI', '?'), "Authors" : record.get('','?'),"Keywords":record.get('','?')}}) #TODO FINISH THIS
+
+      au = record.get('AU', '?')
+      au.sort()
+      for a in au:
+        if a in authors:
+          au.remove(a)
+          authors = updateAuthor(authors, a, au)
+          au.append(a) # TODO this is gross and should not stay this way
+          au.sort()
+        else:
+          au.remove(a)
+          authors = addAuthor(authors, a, au)
+          au.append(a)
+          au.sort()
+
+  return (authors, papers)
 
       
 
@@ -139,10 +148,11 @@ if __name__ == '__main__':
   search_term = sys.argv[1]
   # fname = sys.argv[2]
   print "gathering data..."
-  authors = gatherData(search_term)
+  (Authors, Papers)  = gatherData(search_term)
 
-  writeToJSON(authors)
+  # save data structures for future runs of gatherData()
+  writeToJSON(Authors, 'authors.json')
+  writeToJSON(Papers, 'papers.json')
 
-    authors[author] = dict(Counter(authors[author]) + Counter(authorWeight(coauthors)))
-
+  # create file for networkx or cytoscape to read in as network
   makeAdjList(authors)
