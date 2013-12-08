@@ -69,6 +69,23 @@ def makeAdjList(authors, file_name="pubmed_authors.txt"):
         f.write(au + ' ' + coau + ' ' + str(authors[a][co]) + '\n')
   f.close()
 
+def writeForInfomap(authors, file_name="pubmed_authors_infomap.txt"):
+  author_ids = {}
+  id_count = 1
+  with open(file_name, 'w') as f:
+    for a in authors:
+      if a not in author_ids:
+        author_ids[a] = id_count
+        id_count += 1
+      au = author_ids[a]
+      for co in authors[a]:
+        if co not in author_ids:
+          author_ids[co] = id_count
+          id_count += 1
+        coau = author_ids[co]
+        f.write(str(au)+' '+str(coau)+' '+str(authors[a][co])+'\n')
+  f.close()
+
 # TODO check about adding weights for multiple occurence of same paper
 # TODO handle cycles between authors?  Might be cytoscape/nx parsing
 
@@ -154,8 +171,14 @@ if __name__ == '__main__':
   (Authors, Papers)  = gatherData(search_term)
 
   # save data structures for future runs of gatherData()
+  print "writing JSON files..."
   writeToJSON(Authors, 'authors.json')
   writeToJSON(Papers, 'papers.json')
 
   # create file for networkx or cytoscape to read in as network
+  print "creating author adjacency list..."
   makeAdjList(Authors)
+
+  # create file for infomap to read in as network
+  print "creating numbered author adjacency list..."
+  writeForInfomap(Authors)
