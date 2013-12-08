@@ -13,7 +13,7 @@ as a Counter object with all linked authors and their respective connection
 weights.
 """
 
-import sys, json
+import sys, json, re
 from collections import Counter
 from Bio import Entrez, Medline
 
@@ -157,7 +157,33 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
 
   return (authors, papers)
 
-      
+def recurseKeywords(papers, keyword_queue):
+  for paper in papers:
+#    print paper
+    for keyword in papers[paper]['Keywords']:
+      # remove *, separate / ,
+      keyword = keyword.replace('*','')
+      keyword_list = re.split('[/|,|&]+', keyword)
+#      print keyword_list
+      for add_keyword in keyword_list:
+        if add_keyword not in keyword_queue and add_keyword != '?':
+          keyword_queue[add_keyword] = 0
+#  print keyword_queue
+  # part of function that recurses
+  for search_term in keyword_queue:
+    print search_term
+    if keyword_queue[search_term] == 0 and (search_term != 'Insulin-Secreting Cells' or search_term != 'Ocean and Seas':
+      (Ignore, newPapers) = gatherData(search_term)
+      # save data structures for future runs of gatherData()
+      print "writing JSON files..."
+      writeToJSON(Ignore, 'authors.json')
+      writeToJSON(newPapers, 'papers.json')
+      # creating maps
+      makeAdjList(Ignore)
+      writeForInfomap(Ignore)
+      keyword_queue[search_term] = 1
+      recurseKeywords(newPapers, keyword_queue)
+  
 
 #-------------------------------------------------------------------------#
 #                          Script starts here                             #
@@ -169,6 +195,11 @@ if __name__ == '__main__':
   # fname = sys.argv[2]
   print "gathering data..."
   (Authors, Papers)  = gatherData(search_term)
+
+  # testing purposes
+  print "keyword queue:"
+  keyword_queue = {}
+  recurseKeywords(Papers, keyword_queue)
 
   # save data structures for future runs of gatherData()
   print "writing JSON files..."
