@@ -109,17 +109,18 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
   ids = result['IdList']
   handle = Entrez.efetch(db='pubmed', id=ids, rettype='medline', retmode='text')
   records = Medline.parse(handle)
-  print "efetch complete"
+  print "efetch complete. %s results." % str(len(ids))
 
 
   for record in records:
     idnum = record.get('PMID', '?') 
 
     if idnum in papers:
+      print "Already have %s" % str(idnum)
       pass # Already have this paper
 
     else:
-      papers.update({idnum:{"Title" : record.get('TI', '?'), "Authors" : record.get('','?'),"Keywords":record.get('','?')}}) #TODO FINISH THIS
+      papers.update({idnum:{"Title" : record.get('TI', '?'), "Authors" : record.get('AU','?'),"Keywords":record.get('MH','?')}})
 
       au = record.get('AU', '?')
       au.sort()
@@ -155,4 +156,4 @@ if __name__ == '__main__':
   writeToJSON(Papers, 'papers.json')
 
   # create file for networkx or cytoscape to read in as network
-  makeAdjList(authors)
+  makeAdjList(Authors)
