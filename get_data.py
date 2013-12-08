@@ -54,10 +54,10 @@ def updateAuthor(authors, author, coauthors):
 #                END author network updating functions                    #
 #-------------------------------------------------------------------------#
 
-def writeToJSON(authors, file_name="authors.json"):
+def writeToJSON(obj_to_write, file_name):
   # Put Paper Information in a JSON file
   with open(file_name, 'w') as f:
-     json.dump(authors, f, sort_keys=True, indent=4, separators=(',', ': '))
+     json.dump(obj_to_write, f, sort_keys=True, indent=4, separators=(',', ': '))
      f.closed
 
 def makeAdjList(authors, file_name="pubmed_authors.txt"):
@@ -66,10 +66,12 @@ def makeAdjList(authors, file_name="pubmed_authors.txt"):
       au = a.replace(' ','_')
       for co in authors[a]:
         coau = co.replace(' ','_')
-        f.write(au+' '+coau+' '+str(authors[a][co])+'\n')
+        f.write(au + ' ' + coau + ' ' + str(authors[a][co]) + '\n')
   f.close()
 
 # TODO check about adding weights for multiple occurence of same paper
+# TODO handle cycles between authors?  Might be cytoscape/nx parsing
+
 def gatherData(search_term, email="lwrpratt@gmail.com"):
   """
   Queries pubmed for papers with the given search_term using the BioPython
@@ -79,15 +81,21 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
   their repsective connection strength
   """
 
-  try:
+  try:               # import existing author data
     with open('authors.json', 'r') as auths:
       authors = json.load(auths)
-      print authors
-      print "successfully imported"
-    auths.closed
-  except IOError:
+      auths.closed
+  except IOError:    # none to import
+    print "no old data to import, creating new authors dict"
     authors = {}
-    print "no old data to import"
+
+  try:               # import existing paper ids
+    with open('papers.json', 'r') as paps:
+      papers = json.load(paps)
+      paps.closed
+  except IOError:    # none to import
+    print "no old data to import, creating new papers dict"
+    papers = {}
 
   Entrez.email = email       # NCBI identification
 
@@ -103,28 +111,34 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
   ids = result['IdList']
   handle = Entrez.efetch(db='pubmed', id=ids, rettype='medline', retmode='text')
   records = Medline.parse(handle)
-  print "efetch complete"
+  print "efetch complete. %s results." % str(len(ids))
 
 
   for record in records:
-    au = record.get('AU', '?')
-    au.sort()
-    for a in au:
-      #sys.stdout.write("Author: %s, " % str(a)) # debug
-      if a in authors:
-        #print "existing"                        # debug
-        au.remove(a)
-        authors = updateAuthor(authors, a, au)
-        au.append(a) # TODO this is gross and should not stay this way
-        au.sort()
-      else:
-        #print "new"                             # debug
-        au.remove(a)
-        authors = addAuthor(authors, a, au)
-        au.append(a)
-        au.sort()
+    idnum = record.get('PMID', '?') 
 
-  return authors
+    if idnum in papers:
+      print "Already have %s" % str(idnum)
+      pass # Already have this paper
+
+    else:
+      papers.update({idnum:{"Title" : record.get('TI', '?'), "Authors" : record.get('AU','?'),"Keywords":record.get('MH','?')}})
+
+      au = record.get('AU', '?')
+      au.sort()
+      for a in au:
+        if a in authors:
+          au.remove(a)
+          authors = updateAuthor(authors, a, au)
+          au.append(a) # TODO this is gross and should not stay this way
+          au.sort()
+        else:
+          au.remove(a)
+          authors = addAuthor(authors, a, au)
+          au.append(a)
+          au.sort()
+
+  return (authors, papers)
 
       
 
@@ -137,9 +151,11 @@ if __name__ == '__main__':
   search_term = sys.argv[1]
   # fname = sys.argv[2]
   print "gathering data..."
-  authors = gatherData(search_term)
+  (Authors, Papers)  = gatherData(search_term)
 
-  writeToJSON(authors)
+  # save data structures for future runs of gatherData()
+  writeToJSON(Authors, 'authors.json')
+  writeToJSON(Papers, 'papers.json')
 
-
-  makeAdjList(authors)
+  # create file for networkx or cytoscape to read in as network
+  makeAdjList(Authors)
