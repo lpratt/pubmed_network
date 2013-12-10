@@ -54,6 +54,8 @@ def updateAuthor(authors, author, coauthors):
 #                END author network updating functions                    #
 #-------------------------------------------------------------------------#
 
+# TODO - cytoscape input file so that only one edge between nodes appears
+
 def writeToJSON(obj_to_write, file_name):
   # Put Paper Information in a JSON file
   with open(file_name, 'w') as f:
@@ -61,12 +63,16 @@ def writeToJSON(obj_to_write, file_name):
      f.closed
 
 def makeAdjList(authors, file_name="pubmed_authors.txt"):
+  added_authors = {}
   with open(file_name, 'w') as f:
     for a in authors:
       au = a.replace(' ','_')
       for co in authors[a]:
         coau = co.replace(' ','_')
-        f.write(au + ' ' + coau + ' ' + str(authors[a][co]) + '\n')
+        if (au,coau) not in added_authors and (coau,au) not in added_authors: # add to file and to added_authors
+          added_authors[(au,coau)] = authors[a][co]
+          added_authors[(coau,au)] = authors[a][co]
+          f.write(au + ' ' + coau + ' ' + str(authors[a][co]) + '\n')
   f.close()
 
 def writeForInfomap(authors, file_name="pubmed_authors_infomap.txt"):
@@ -137,9 +143,12 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
     if idnum in papers:
       print "Already have %s" % str(idnum)
       pass # Already have this paper
-
+      # add search terms
+      if search_term not in papers[idnum]["Search Terms"]:
+        papers[idnum]["Search Terms"].append(search_term)
     else:
-      papers.update({idnum:{"Title" : record.get('TI', '?'), "Authors" : record.get('AU','?'),"Keywords":record.get('MH','?')}})
+      search_term_set = [search_term]
+      papers.update({idnum:{"Search Terms": search_term_set, "Title" : record.get('TI', '?'), "Authors" : record.get('AU','?'),"Keywords":record.get('MH','?')}})
 
       au = record.get('AU', '?')
       au.sort()
@@ -157,6 +166,7 @@ def gatherData(search_term, email="lwrpratt@gmail.com"):
 
   return (authors, papers)
 
+# TODO: breaks on certain words, also does not deal with empty keyword_queue
 def recurseKeywords(papers, keyword_queue):
   for paper in papers:
 #    print paper
@@ -166,13 +176,13 @@ def recurseKeywords(papers, keyword_queue):
       keyword_list = re.split('[/|,|&]+', keyword)
 #      print keyword_list
       for add_keyword in keyword_list:
-        if add_keyword not in keyword_queue and add_keyword != '?':
+        if add_keyword != '?' and add_keyword not in keyword_queue:
           keyword_queue[add_keyword] = 0
 #  print keyword_queue
   # part of function that recurses
   for search_term in keyword_queue:
-    print search_term
-    if keyword_queue[search_term] == 0 and (search_term != 'Insulin-Secreting Cells' or search_term != 'Ocean and Seas':
+    if keyword_queue[search_term] == 0 and search_term != 'Insulin-Secreting Cells' and search_term != 'Oceans and Seas' and search_term != "Time Factors" and search_term != "HIV Infections" and search_term != "Lymphopoiesis":
+      print search_term
       (Ignore, newPapers) = gatherData(search_term)
       # save data structures for future runs of gatherData()
       print "writing JSON files..."
@@ -184,6 +194,8 @@ def recurseKeywords(papers, keyword_queue):
       keyword_queue[search_term] = 1
       recurseKeywords(newPapers, keyword_queue)
   
+
+# TODO : function that takes in a community and labels the keywords associated with it
 
 #-------------------------------------------------------------------------#
 #                          Script starts here                             #
