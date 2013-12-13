@@ -92,6 +92,39 @@ def writeForInfomap(authors, file_name="pubmed_authors_infomap.txt"):
         f.write(str(au)+' '+str(coau)+' '+str(authors[a][co])+'\n')
   f.close()
 
+def authorKeyword(target_file="author_keyword.json", f="papers.json"):
+#  with open(target_file, 'r+') as f:
+#    authkey = json.load(target_file)
+
+  with open(f, 'r') as pap:
+    papers = json.load(pap)
+    pap.closed
+
+  try:
+    with open(target_file, 'r') as target:
+      authkey = json.load(target)
+      target.closed
+  except IOError:
+    authkey = {}
+
+  for id in papers:
+    for author in papers[id]['Authors']:
+      id_set = [id]
+      keyword_set = []
+      for key in papers[id]['Keywords']:
+        keyword_set.append(key)
+      if author in authkey:
+        authkey[author]['Keywords'].append(keyword_set)
+        authkey[author]['Paper ID'].append(id)
+      else:
+        authkey.update({author: {'Keywords': keyword_set, 'Paper ID': id_set}})
+
+  writeToJSON(authkey, 'author_keyword.json')
+#    json.dump()
+#    f.closed
+  return authkey
+
+
 # TODO check about adding weights for multiple occurence of same paper
 # TODO handle cycles between authors?  Might be cytoscape/nx parsing
 
